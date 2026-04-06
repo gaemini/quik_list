@@ -1,0 +1,70 @@
+{
+  "@@locale": "ko",
+  "appTitle": "QR 체크인",
+  "login": "로그인",
+  "signUp": "회원가입",
+  "email": "이메일",
+  "password": "비밀번호",
+  "continueWithGoogle": "Google 계정으로 계속하기",
+  "continueWithApple": "Apple 계정으로 계속하기",
+  "or": "또는",
+  "socialSignUp": "소셜 계정으로 회원가입",
+  "firstTimeUser": "처음 사용하시는 경우 회원가입을 진행해주세요",
+  
+  "profileSetup": "프로필 설정",
+  "profileSetupDescription": "프로필 정보를 입력해주세요",
+  "profileSetupNote": "서비스 이용을 위해 필수 정보가 필요합니다",
+  "name": "이름",
+  "department": "학과",
+  "major": "전공",
+  "grade": "학년",
+  "phone": "전화번호",
+  "nationality": "국적",
+  "saveAndStart": "프로필 저장하고 시작하기",
+  "requiredFields": "* 표시된 항목은 필수 입력 항목입니다",
+  
+  "home": "홈",
+  "createChecklist": "체크리스트 만들기",
+  "myChecklists": "내 체크리스트",
+  "noChecklists": "아직 체크리스트가 없습니다",
+  "createFirst": "첫 번째 체크리스트를 만들어보세요",
+  
+  "generateQR": "QR 코드 생성",
+  "scanQR": "QR 코드 스캔",
+  "register": "등록",
+  "registerParticipant": "참가자 등록",
+  
+  "participants": "참가자",
+  "pending": "대기중",
+  "confirmed": "확인됨",
+  "noParticipants": "아직 참가자가 없습니다",
+  
+  "searchCountry": "국가 검색",
+  "selectNationality": "국적을 선택하세요",
+  
+  "save": "저장",
+  "cancel": "취소",
+  "confirm": "확인",
+  "delete": "삭제",
+  "edit": "수정",
+  "logout": "로그아웃",
+  
+  "success": "성공",
+  "error": "오류",
+  "loading": "로딩 중...",
+  
+  "pleaseEnterName": "이름을 입력해주세요",
+  "pleaseEnterMajor": "전공을 입력해주세요",
+  "pleaseSelectGrade": "학년을 선택해주세요",
+  "pleaseEnterPhone": "전화번호를 입력해주세요",
+  "pleaseSelectNationality": "국적을 선택해주세요",
+  
+  "registrationSuccess": "등록이 완료되었습니다!",
+  "registrationFailed": "등록에 실패했습니다",
+  
+  "freshman": "1학년",
+  "sophomore": "2학년",
+  "junior": "3학년",
+  "senior": "4학년",
+  "graduate": "대학원생"
+}

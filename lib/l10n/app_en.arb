@@ -1,0 +1,70 @@
+{
+  "@@locale": "en",
+  "appTitle": "QR Check-In",
+  "login": "Login",
+  "signUp": "Sign Up",
+  "email": "Email",
+  "password": "Password",
+  "continueWithGoogle": "Continue with Google",
+  "continueWithApple": "Continue with Apple",
+  "or": "OR",
+  "socialSignUp": "Sign up with social account",
+  "firstTimeUser": "First time user? Please sign up",
+  
+  "profileSetup": "Profile Setup",
+  "profileSetupDescription": "Please enter your profile information",
+  "profileSetupNote": "Required information for service",
+  "name": "Name",
+  "department": "Department",
+  "major": "Major",
+  "grade": "Grade",
+  "phone": "Phone Number",
+  "nationality": "Nationality",
+  "saveAndStart": "Save Profile and Start",
+  "requiredFields": "* Required fields",
+  
+  "home": "Home",
+  "createChecklist": "Create Checklist",
+  "myChecklists": "My Checklists",
+  "noChecklists": "No checklists yet",
+  "createFirst": "Create your first checklist",
+  
+  "generateQR": "Generate QR Code",
+  "scanQR": "Scan QR Code",
+  "register": "Register",
+  "registerParticipant": "Register Participant",
+  
+  "participants": "Participants",
+  "pending": "Pending",
+  "confirmed": "Confirmed",
+  "noParticipants": "No participants yet",
+  
+  "searchCountry": "Search country",
+  "selectNationality": "Select nationality",
+  
+  "save": "Save",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "delete": "Delete",
+  "edit": "Edit",
+  "logout": "Logout",
+  
+  "success": "Success",
+  "error": "Error",
+  "loading": "Loading...",
+  
+  "pleaseEnterName": "Please enter name",
+  "pleaseEnterMajor": "Please enter major",
+  "pleaseSelectGrade": "Please select grade",
+  "pleaseEnterPhone": "Please enter phone number",
+  "pleaseSelectNationality": "Please select nationality",
+  
+  "registrationSuccess": "Registration successful!",
+  "registrationFailed": "Registration failed",
+  
+  "freshman": "Freshman",
+  "sophomore": "Sophomore",
+  "junior": "Junior",
+  "senior": "Senior",
+  "graduate": "Graduate Student"
+}
