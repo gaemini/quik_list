@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_check_app/core/services/firestore_service.dart';
 import 'package:qr_check_app/core/services/pdf_service.dart';
+import 'package:qr_check_app/features/participant/presentation/pages/participant_detail_page.dart';
 
 enum SortMode { name, joinedAt }
 
@@ -281,15 +282,41 @@ class _FinalListPageState extends State<FinalListPage> {
         return DataRow(
           color: WidgetStateProperty.all(entry.key % 2 == 0 ? Colors.white : _secondary.withOpacity(0.2)),
           cells: [
-            DataCell(Text(participantData['name'] ?? '알 수 없음', style: const TextStyle(fontWeight: FontWeight.bold, color: _neutral))),
+            DataCell(
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ParticipantDetailPage(participant: participantDoc),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        participantData['name'] ?? '알 수 없음',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _primary,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.info_outline, size: 16, color: _primary.withOpacity(0.5)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             ...items.map((itemDoc) {
               final isChecked = checks[itemDoc.id] == true;
               return DataCell(
                 Center(
-                  child: Checkbox(
-                    value: isChecked,
-                    activeColor: _primary,
-                    onChanged: (value) => _toggleCheck(participantDoc.id, itemDoc.id, value ?? false),
+                  child: _buildCheckboxIcon(
+                    isChecked: isChecked,
+                    onTap: () => _toggleCheck(participantDoc.id, itemDoc.id, !isChecked),
                   ),
                 ),
               );
@@ -297,6 +324,28 @@ class _FinalListPageState extends State<FinalListPage> {
           ],
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildCheckboxIcon({required bool isChecked, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (child, animation) {
+            return ScaleTransition(scale: animation, child: child);
+          },
+          child: Icon(
+            isChecked ? Icons.check_circle : Icons.radio_button_unchecked,
+            key: ValueKey(isChecked),
+            color: isChecked ? _primary : _neutral,
+            size: 24,
+          ),
+        ),
+      ),
     );
   }
 

@@ -234,7 +234,7 @@ class PDFService {
           text,
           style: pw.TextStyle(
             fontSize: isHeader ? 12 : 11,
-            fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+            fontWeight: pw.FontWeight.bold,
             font: font,
           ),
         ),
@@ -242,18 +242,20 @@ class PDFService {
     );
   }
 
-  /// 체크박스 셀 생성 (✔ 또는 ✖)
+  /// 체크박스 셀 생성 (filled box for checked, empty for unchecked)
   pw.Widget _buildCheckboxCell(bool isChecked, pw.Font font) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(8),
       child: pw.Center(
-        child: pw.Text(
-          isChecked ? '✔' : '✖',
-          style: pw.TextStyle(
-            fontSize: 14,
-            color: isChecked ? PdfColors.green700 : PdfColors.red700,
-            fontWeight: pw.FontWeight.bold,
-            font: font,
+        child: pw.Container(
+          width: 14,
+          height: 14,
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(
+              color: PdfColors.black,
+              width: 1.5,
+            ),
+            color: isChecked ? PdfColors.black : PdfColors.white,
           ),
         ),
       ),

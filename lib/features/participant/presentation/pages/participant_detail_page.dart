@@ -1,16 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:qr_check_app/core/services/firestore_service.dart';
 
-/// 참가자 상세 정보 화면
-/// QR 스캔 후 참가자 정보를 보여주고 확인/제거 처리
 class ParticipantDetailPage extends StatefulWidget {
-  final String participantId;
+  final DocumentSnapshot participant;
 
-  const ParticipantDetailPage({
-    super.key,
-    required this.participantId,
-  });
+  const ParticipantDetailPage({super.key, required this.participant});
 
   @override
   State<ParticipantDetailPage> createState() => _ParticipantDetailPageState();
@@ -18,124 +14,39 @@ class ParticipantDetailPage extends StatefulWidget {
 
 class _ParticipantDetailPageState extends State<ParticipantDetailPage> {
   final _firestoreService = FirestoreService();
-  bool _isLoading = false;
+  
+  static const _primary = Color(0xFFFF7300);
+  static const _secondary = Color(0xFFFFE5D9);
+  static const _neutral = Color(0xFF2C3E50);
 
-  /// 참가자 확인 처리
-  Future<void> _handleConfirm(BuildContext context, Map<String, dynamic> participant) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('참가자 확인'),
-        content: Text('${participant['name']} 님을 확인하시겠습니까?'),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('확인'),
-          ),
-        ],
-      ),
-    );
+  Map<String, dynamic>? _userProfile;
+  bool _isLoading = true;
 
-    if (confirmed != true) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      await _firestoreService.confirmParticipant(widget.participantId);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${participant['name']} 님이 확인되었습니다'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.of(context).pop(true);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('확인 처리 실패: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
   }
 
-  /// 참가자 제거 처리
-  Future<void> _handleRemove(BuildContext context, Map<String, dynamic> participant) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('참가자 제거'),
-        content: Text('${participant['name']} 님을 제거하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('제거'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    setState(() => _isLoading = true);
-
+  Future<void> _loadUserProfile() async {
     try {
-      await _firestoreService.removeParticipant(widget.participantId);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${participant['name']} 님이 제거되었습니다'),
-            backgroundColor: Colors.orange,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.of(context).pop(true);
+      final participantData = widget.participant.data() as Map<String, dynamic>;
+      final userId = participantData['userId'] as String?;
+      
+      if (userId != null) {
+        final profile = await _firestoreService.getUserProfile(userId);
+        if (mounted) {
+          setState(() {
+            _userProfile = profile;
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('제거 처리 실패: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -144,332 +55,183 @@ class _ParticipantDetailPageState extends State<ParticipantDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final participantData = widget.participant.data() as Map<String, dynamic>;
+    final name = participantData['name'] ?? '알 수 없음';
+    final joinedAt = participantData['joinedAt'] as Timestamp?;
+    
+    // users 컬렉션에서 가져온 상세 정보
+    final major = _userProfile?['major'] ?? '-';
+    final grade = _userProfile?['grade'] ?? '-';
+    final phone = _userProfile?['phone'] ?? '-';
+    final nationality = _userProfile?['nationality'] ?? '-';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('참가자 정보'),
-        centerTitle: true,
+        title: const Text('참가자 상세정보'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.copy, color: _primary),
+            tooltip: '정보 복사',
+            onPressed: () => _copyToClipboard(context, name, major, grade, phone, nationality),
+          ),
+        ],
       ),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: _firestoreService.getParticipantById(widget.participantId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    '오류 발생: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.person_off, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text(
-                    '참가자를 찾을 수 없습니다',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('돌아가기'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final participant = snapshot.data!.data() as Map<String, dynamic>;
-          final status = participant['status'] ?? 'pending';
-
-          return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 상태 배지
-                  _buildStatusBadge(status),
-                  const SizedBox(height: 24),
-
-                  // 프로필 아이콘
-                  Center(
-                    child: CircleAvatar(
-                      radius: 60,
-                      backgroundColor: _getStatusColor(status).withOpacity(0.1),
-                      child: Icon(
-                        Icons.person,
-                        size: 60,
-                        color: _getStatusColor(status),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // 참가자 정보 카드
-                  _buildInfoCard(
-                    icon: Icons.person,
-                    label: '이름',
-                    value: participant['name'] ?? '알 수 없음',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoCard(
-                    icon: Icons.business,
-                    label: '학과',
-                    value: participant['department'] ?? '알 수 없음',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoCard(
-                    icon: Icons.school,
-                    label: '전공',
-                    value: participant['major'] ?? '알 수 없음',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoCard(
-                    icon: Icons.grade,
-                    label: '학년',
-                    value: participant['grade'] ?? '알 수 없음',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoCard(
-                    icon: Icons.phone,
-                    label: '전화번호',
-                    value: participant['phone'] ?? '알 수 없음',
-                  ),
-                  const SizedBox(height: 32),
-
-                  // 버튼 영역 (status가 pending인 경우만 표시)
-                  if (status == 'pending') ...[
-                    // 확인 버튼
-                    ElevatedButton.icon(
-                      onPressed: _isLoading
-                          ? null
-                          : () => _handleConfirm(context, participant),
-                      icon: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Icon(Icons.check_circle),
-                      label: const Text(
-                        '확인',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // 제거 버튼
-                    OutlinedButton.icon(
-                      onPressed: _isLoading
-                          ? null
-                          : () => _handleRemove(context, participant),
-                      icon: const Icon(Icons.cancel),
-                      label: const Text(
-                        '제거',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        side: const BorderSide(color: Colors.red, width: 2),
-                      ),
-                    ),
-                  ] else ...[
-                    // 이미 처리된 경우 안내 메시지
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: _primary),
+              )
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _getStatusColor(status).withOpacity(0.3),
-                        ),
+                        color: _secondary,
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Row(
+                      child: Column(
                         children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: _getStatusColor(status),
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundColor: _primary.withOpacity(0.2),
+                            child: const Icon(Icons.person, size: 40, color: _primary),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              status == 'confirmed'
-                                  ? '이미 확인된 참가자입니다'
-                                  : '제거된 참가자입니다',
+                          const SizedBox(height: 16),
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: _neutral,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (joinedAt != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              '참여: ${_formatTimestamp(joinedAt)}',
                               style: TextStyle(
-                                color: _getStatusColor(status),
-                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: _neutral.withOpacity(0.5),
                               ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
+                    const SizedBox(height: 24),
+                    _buildInfoCard(
+                      context,
+                      icon: Icons.school_outlined,
+                      label: '전공',
+                      value: major,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInfoCard(
+                      context,
+                      icon: Icons.stairs_outlined,
+                      label: '학년',
+                      value: grade,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInfoCard(
+                      context,
+                      icon: Icons.phone_outlined,
+                      label: '전화번호',
+                      value: phone,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInfoCard(
+                      context,
+                      icon: Icons.public_outlined,
+                      label: '국적',
+                      value: nationality,
+                    ),
                   ],
-                ],
+                ),
               ),
-            ),
-          );
-        },
       ),
     );
   }
 
-  /// 상태 배지 위젯
-  Widget _buildStatusBadge(String status) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: _getStatusColor(status).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _getStatusColor(status)),
-        ),
+  Widget _buildInfoCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    Widget? actionButton,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              _getStatusIcon(status),
-              size: 16,
-              color: _getStatusColor(status),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _secondary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: _primary, size: 20),
             ),
-            const SizedBox(width: 8),
-            Text(
-              _getStatusText(status),
-              style: TextStyle(
-                color: _getStatusColor(status),
-                fontWeight: FontWeight.bold,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: _neutral.withOpacity(0.5),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _neutral,
+                    ),
+                  ),
+                ],
               ),
             ),
+            if (actionButton != null) actionButton,
           ],
         ),
       ),
     );
   }
 
-  /// 정보 카드 위젯
-  Widget _buildInfoCard({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: Colors.blue, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+  String _formatTimestamp(Timestamp timestamp) {
+    final dateTime = timestamp.toDate();
+    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _copyToClipboard(BuildContext context, String name, String major, String grade, String phone, String nationality) {
+    final text = '''
+이름: $name
+전공: $major
+학년: $grade
+전화번호: $phone
+국적: $nationality
+''';
+    
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('정보가 클립보드에 복사되었습니다'),
+        backgroundColor: _primary,
+        duration: Duration(seconds: 2),
       ),
     );
-  }
-
-  /// 상태에 따른 색상 반환
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'confirmed':
-        return Colors.green;
-      case 'removed':
-        return Colors.red;
-      case 'pending':
-      default:
-        return Colors.grey;
-    }
-  }
-
-  /// 상태에 따른 아이콘 반환
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'confirmed':
-        return Icons.check_circle;
-      case 'removed':
-        return Icons.cancel;
-      case 'pending':
-      default:
-        return Icons.hourglass_empty;
-    }
-  }
-
-  /// 상태에 따른 텍스트 반환
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'confirmed':
-        return '확인 완료';
-      case 'removed':
-        return '제거됨';
-      case 'pending':
-      default:
-        return '대기 중';
-    }
   }
 }
