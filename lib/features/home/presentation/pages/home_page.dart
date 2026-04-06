@@ -3,6 +3,8 @@ import 'package:qr_check_app/core/services/auth_service.dart';
 import 'package:qr_check_app/features/auth/presentation/pages/login_page.dart';
 import 'package:qr_check_app/features/checklist/presentation/pages/checklists_list_page.dart';
 import 'package:qr_check_app/features/checklist/presentation/pages/create_checklist_page.dart';
+import 'package:qr_check_app/features/qr/presentation/pages/qr_scan_page.dart';
+import 'package:qr_check_app/features/participant/presentation/pages/my_joined_lists_page.dart';
 
 /// 홈 페이지 - 로그인 후 메인 화면
 class HomePage extends StatelessWidget {
@@ -91,7 +93,7 @@ class HomePage extends StatelessWidget {
 
               // 메인 액션 버튼들
               Text(
-                '체크리스트 관리',
+                '호스트 기능',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -132,6 +134,49 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
+              // 참가자 기능 섹션
+              Text(
+                '참가자 기능',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 16),
+
+              // QR 스캔하기 버튼
+              _buildActionButton(
+                context,
+                icon: Icons.qr_code_scanner,
+                title: 'QR 스캔하기',
+                description: 'QR 코드를 스캔하여 이벤트에 참여하세요',
+                color: Colors.orange,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const QrScanPage(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // 내가 참여한 이벤트 버튼
+              _buildActionButton(
+                context,
+                icon: Icons.event_available,
+                title: '내가 참여한 이벤트',
+                description: '참여한 이벤트 목록을 확인하세요',
+                color: Colors.purple,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MyJoinedListsPage(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 32),
+
               // 안내 문구
               Container(
                 padding: const EdgeInsets.all(16),
@@ -153,7 +198,7 @@ class HomePage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'QR 체크인 시스템',
+                            '이벤트 참가자 관리 시스템',
                             style: TextStyle(
                               color: Colors.blue[900],
                               fontWeight: FontWeight.bold,
@@ -162,7 +207,7 @@ class HomePage extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '체크리스트를 만들고 참가자들이 QR 코드로 쉽게 체크인할 수 있습니다.',
+                            'Host: 체크리스트를 만들고 실시간으로 참가자를 관리하세요.\nParticipant: QR 코드를 스캔하여 간편하게 이벤트에 참여하세요.',
                             style: TextStyle(
                               color: Colors.blue[900],
                               fontSize: 13,

@@ -15,6 +15,11 @@ class _CreateChecklistPageState extends State<CreateChecklistPage> {
   final _descriptionController = TextEditingController();
   final _authService = AuthService();
   final _firestoreService = FirestoreService();
+
+  static const _primary = Color(0xFFFF7300);
+  static const _secondary = Color(0xFFFFE5D9);
+  static const _neutral = Color(0xFF2C3E50);
+
   bool _isLoading = false;
 
   @override
@@ -31,9 +36,7 @@ class _CreateChecklistPageState extends State<CreateChecklistPage> {
 
     try {
       final currentUser = _authService.getCurrentUser();
-      if (currentUser == null) {
-        throw Exception('로그인이 필요합니다');
-      }
+      if (currentUser == null) throw Exception('로그인이 필요합니다');
 
       final checklistRef = await _firestoreService.createChecklist({
         'title': _titleController.text.trim(),
@@ -43,84 +46,63 @@ class _CreateChecklistPageState extends State<CreateChecklistPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('체크리스트가 생성되었습니다'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
+          const SnackBar(content: Text('체크리스트가 생성되었습니다'), backgroundColor: _primary),
         );
         Navigator.of(context).pop(checklistRef.id);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('체크리스트 생성 실패: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+          SnackBar(content: Text('체크리스트 생성 실패: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('새 체크리스트 만들기'),
-      ),
+      appBar: AppBar(title: const Text('새 체크리스트 만들기')),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: _secondary,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue[200]!),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.blue[700],
-                        size: 24,
-                      ),
+                      const Icon(Icons.info_outline, color: _primary, size: 24),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           '이벤트나 행사의 체크리스트를 생성하세요',
-                          style: TextStyle(
-                            color: Colors.blue[900],
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: _neutral, fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 TextFormField(
                   controller: _titleController,
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: _neutral),
                   decoration: const InputDecoration(
                     labelText: '체크리스트 제목',
                     hintText: '예: 2024 신입생 환영회',
                     prefixIcon: Icon(Icons.title),
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '제목을 입력해주세요';
-                    }
+                    if (value == null || value.trim().isEmpty) return '제목을 입력해주세요';
                     return null;
                   },
                   textInputAction: TextInputAction.next,
@@ -128,6 +110,7 @@ class _CreateChecklistPageState extends State<CreateChecklistPage> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _descriptionController,
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: _neutral),
                   decoration: const InputDecoration(
                     labelText: '설명 (선택사항)',
                     hintText: '체크리스트에 대한 간단한 설명을 입력하세요',
@@ -136,30 +119,12 @@ class _CreateChecklistPageState extends State<CreateChecklistPage> {
                   maxLines: 3,
                   textInputAction: TextInputAction.done,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _createChecklist,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
                   child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          '체크리스트 생성',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('체크리스트 생성'),
                 ),
               ],
             ),

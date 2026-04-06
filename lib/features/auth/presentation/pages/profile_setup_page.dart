@@ -4,7 +4,6 @@ import 'package:qr_check_app/core/services/auth_service.dart';
 import 'package:qr_check_app/core/services/firestore_service.dart';
 import 'package:qr_check_app/features/home/presentation/pages/home_page.dart';
 
-/// 첫 로그인 후 프로필 입력 페이지
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
 
@@ -16,6 +15,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
   final _firestoreService = FirestoreService();
+
+  static const _primary = Color(0xFFFF7300);
+  static const _secondary = Color(0xFFFFE5D9);
+  static const _neutral = Color(0xFF2C3E50);
 
   final _nameController = TextEditingController();
   final _majorController = TextEditingController();
@@ -35,7 +38,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     super.dispose();
   }
 
-  /// 프로필 저장 처리
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -53,11 +55,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
     try {
       final user = _authService.getCurrentUser();
-      if (user == null) {
-        throw Exception('로그인 정보를 찾을 수 없습니다');
-      }
+      if (user == null) throw Exception('로그인 정보를 찾을 수 없습니다');
 
-      // Provider 확인
       String provider = 'email';
       if (user.providerData.isNotEmpty) {
         final providerId = user.providerData.first.providerId;
@@ -82,41 +81,28 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('프로필이 저장되었습니다!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
+          const SnackBar(content: Text('프로필이 저장되었습니다!'), backgroundColor: _primary),
         );
-
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomePage()),
         );
       }
     } catch (e) {
-      if (mounted) {
-        _showError(e.toString());
-      }
+      if (mounted) _showError(e.toString());
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
   void _showNationalityPicker() {
     final locale = Localizations.localeOf(context).languageCode;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -145,11 +131,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   String _getSelectedNationalityName() {
     if (_selectedNationalityCode == null) return '';
-    
     final locale = Localizations.localeOf(context).languageCode;
-    final country = CountryData.countries.firstWhere(
-      (c) => c.code == _selectedNationalityCode,
-    );
+    final country = CountryData.countries.firstWhere((c) => c.code == _selectedNationalityCode);
     return country.getName(locale);
   }
 
@@ -163,180 +146,94 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  '프로필 정보를 입력해주세요',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
+                Text('프로필 정보를 입력해주세요', style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center),
                 const SizedBox(height: 8),
                 Text(
                   '서비스 이용을 위해 필수 정보가 필요합니다',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _neutral.withOpacity(0.5)),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
-                // 이름
                 TextFormField(
                   controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: '이름 *',
-                    hintText: '홍길동',
-                    prefixIcon: const Icon(Icons.person_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: _neutral),
+                  decoration: const InputDecoration(labelText: '이름 *', hintText: '홍길동', prefixIcon: Icon(Icons.person_outline)),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '이름을 입력해주세요';
-                    }
+                    if (value == null || value.trim().isEmpty) return '이름을 입력해주세요';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
-                // 전공
                 TextFormField(
                   controller: _majorController,
-                  decoration: InputDecoration(
-                    labelText: '전공 *',
-                    hintText: '컴퓨터공학',
-                    prefixIcon: const Icon(Icons.school_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: _neutral),
+                  decoration: const InputDecoration(labelText: '전공 *', hintText: '컴퓨터공학', prefixIcon: Icon(Icons.school_outlined)),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '전공을 입력해주세요';
-                    }
+                    if (value == null || value.trim().isEmpty) return '전공을 입력해주세요';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
-                // 학년
                 DropdownButtonFormField<String>(
                   value: _selectedGrade,
-                  decoration: InputDecoration(
-                    labelText: '학년 *',
-                    prefixIcon: const Icon(Icons.stairs_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  items: _grades.map((grade) {
-                    return DropdownMenuItem(
-                      value: grade,
-                      child: Text(grade),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedGrade = value;
-                    });
-                  },
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: _neutral),
+                  decoration: const InputDecoration(labelText: '학년 *', prefixIcon: Icon(Icons.stairs_outlined)),
+                  items: _grades.map((grade) => DropdownMenuItem(value: grade, child: Text(grade))).toList(),
+                  onChanged: (value) => setState(() => _selectedGrade = value),
                   validator: (value) {
-                    if (value == null) {
-                      return '학년을 선택해주세요';
-                    }
+                    if (value == null) return '학년을 선택해주세요';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
-                // 전화번호
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: '전화번호 *',
-                    hintText: '010-1234-5678',
-                    prefixIcon: const Icon(Icons.phone_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: _neutral),
+                  decoration: const InputDecoration(labelText: '전화번호 *', hintText: '010-1234-5678', prefixIcon: Icon(Icons.phone_outlined)),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '전화번호를 입력해주세요';
-                    }
+                    if (value == null || value.trim().isEmpty) return '전화번호를 입력해주세요';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
-                // 국적
                 InkWell(
                   onTap: _showNationalityPicker,
                   child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: '국적 *',
-                      prefixIcon: const Icon(Icons.public_outlined),
-                      suffixIcon: const Icon(Icons.arrow_drop_down),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                    decoration: const InputDecoration(labelText: '국적 *', prefixIcon: Icon(Icons.public_outlined), suffixIcon: Icon(Icons.arrow_drop_down)),
                     child: Text(
-                      _selectedNationalityCode == null
-                          ? '국적을 선택하세요'
-                          : _getSelectedNationalityName(),
+                      _selectedNationalityCode == null ? '국적을 선택하세요' : _getSelectedNationalityName(),
                       style: TextStyle(
-                        color: _selectedNationalityCode == null
-                            ? Colors.grey[600]
-                            : Colors.black,
+                        fontWeight: FontWeight.w600,
+                        color: _selectedNationalityCode == null ? _neutral.withOpacity(0.5) : _neutral,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
-                // 제출 버튼
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleSubmit,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                   child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          '프로필 저장하고 시작하기',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('프로필 저장하고 시작하기'),
                 ),
                 const SizedBox(height: 16),
 
                 Text(
                   '* 표시된 항목은 필수 입력 항목입니다',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _neutral.withOpacity(0.5)),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -348,7 +245,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   }
 }
 
-/// 국적 선택 Bottom Sheet
 class _NationalityPickerSheet extends StatefulWidget {
   final ScrollController scrollController;
   final String locale;
@@ -367,6 +263,9 @@ class _NationalityPickerSheet extends StatefulWidget {
 }
 
 class _NationalityPickerSheetState extends State<_NationalityPickerSheet> {
+  static const _primary = Color(0xFFFF7300);
+  static const _neutral = Color(0xFF2C3E50);
+
   final TextEditingController _searchController = TextEditingController();
   List<CountryData> _filteredCountries = CountryData.countries;
 
@@ -395,48 +294,26 @@ class _NationalityPickerSheetState extends State<_NationalityPickerSheet> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Handle bar
         Container(
           margin: const EdgeInsets.only(top: 8, bottom: 16),
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Colors.grey[300],
-            borderRadius: BorderRadius.circular(2),
-          ),
+          width: 40, height: 4,
+          decoration: BoxDecoration(color: _neutral.withOpacity(0.2), borderRadius: BorderRadius.circular(2)),
         ),
-
-        // 제목
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            '국적 선택',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
+          child: Text('국적 선택', style: Theme.of(context).textTheme.titleLarge),
         ),
         const SizedBox(height: 16),
-
-        // 검색 필드
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: TextField(
             controller: _searchController,
-            decoration: InputDecoration(
-              hintText: '국가 검색',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w600, color: _neutral),
+            decoration: const InputDecoration(hintText: '국가 검색', prefixIcon: Icon(Icons.search)),
             onChanged: _filterCountries,
           ),
         ),
         const SizedBox(height: 16),
-
-        // 국가 목록
         Expanded(
           child: ListView.builder(
             controller: widget.scrollController,
@@ -446,25 +323,12 @@ class _NationalityPickerSheetState extends State<_NationalityPickerSheet> {
               final isSelected = country.code == widget.selectedCode;
 
               return ListTile(
-                leading: Text(
-                  country.code,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[600],
-                  ),
-                ),
+                leading: Text(country.code, style: TextStyle(fontWeight: FontWeight.w600, color: _neutral.withOpacity(0.5))),
                 title: Text(
                   country.getName(widget.locale),
-                  style: TextStyle(
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
+                  style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, color: _neutral),
                 ),
-                trailing: isSelected
-                    ? Icon(
-                        Icons.check_circle,
-                        color: Theme.of(context).primaryColor,
-                      )
-                    : null,
+                trailing: isSelected ? const Icon(Icons.check_circle, color: _primary) : null,
                 onTap: () => widget.onSelect(country.code),
               );
             },

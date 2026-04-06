@@ -10,6 +10,8 @@ class FirestoreService {
   CollectionReference get checklistsCollection => _firestore.collection('checklists');
   CollectionReference get participantsCollection => _firestore.collection('participants');
   CollectionReference get checkinsCollection => _firestore.collection('checkins');
+  CollectionReference get userJoinedListsCollection => _firestore.collection('user_joined_lists');
+  CollectionReference get checklistItemsCollection => _firestore.collection('checklist_items');
 
   /// 사용자 생성 또는 업데이트
   /// 
@@ -80,16 +82,40 @@ class FirestoreService {
   /// - title: 체크리스트 제목
   /// - description: 체크리스트 설명
   /// - hostId: 생성자 ID
+  /// - status: "collecting" (기본값)
   /// - createdAt: 생성 시간
   Future<DocumentReference> createChecklist(Map<String, dynamic> data) async {
     try {
       return await checklistsCollection.add({
         ...data,
+        'status': 'collecting',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       throw Exception('체크리스트 생성 실패: $e');
+    }
+  }
+
+  /// 단일 체크리스트 조회
+  Future<DocumentSnapshot> getChecklist(String checklistId) async {
+    try {
+      return await checklistsCollection.doc(checklistId).get();
+    } catch (e) {
+      throw Exception('체크리스트 조회 실패: $e');
+    }
+  }
+
+  /// 체크리스트 마감
+  /// status를 "closed"로 변경하고 closedAt 타임스탬프 추가
+  Future<void> closeChecklist(String checklistId) async {
+    try {
+      await checklistsCollection.doc(checklistId).update({
+        'status': 'closed',
+        'closedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('체크리스트 마감 실패: $e');
     }
   }
 
@@ -100,23 +126,81 @@ class FirestoreService {
         .snapshots();
   }
 
-  /// 참가자 생성
+  /// 체크리스트에 참여하기 (간단한 1-클릭 참여)
   /// 
-  /// [data] 참가자 데이터
-  /// - name: 참가자 이름
-  /// - email: 참가자 이메일
-  /// - qrCode: QR 코드 문자열
-  /// - checklistId: 소속 체크리스트 ID
-  Future<DocumentReference> createParticipant(Map<String, dynamic> data) async {
+  /// [userId] 참가자 Firebase Auth UID
+  /// [name] 참가자 이름 (프로필에서 가져옴)
+  /// [checklistId] 참여할 체크리스트 ID
+  Future<DocumentReference> joinChecklist({
+    required String userId,
+    required String name,
+    required String checklistId,
+  }) async {
     try {
       return await participantsCollection.add({
-        ...data,
+        'userId': userId,
+        'name': name,
+        'checklistId': checklistId,
+        'status': 'joined',
+        'joinedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      throw Exception('참가자 생성 실패: $e');
+      throw Exception('체크리스트 참여 실패: $e');
     }
+  }
+
+  /// 특정 체크리스트의 참여한 참가자 목록 조회
+  /// status가 "joined"인 참가자만 반환
+  Stream<QuerySnapshot> getJoinedParticipants(String checklistId) {
+    return participantsCollection
+        .where('checklistId', isEqualTo: checklistId)
+        .where('status', isEqualTo: 'joined')
+        .snapshots();
+  }
+
+  /// 사용자가 이미 참여했는지 확인
+  Future<bool> hasUserJoined({
+    required String userId,
+    required String checklistId,
+  }) async {
+    try {
+      final snapshot = await participantsCollection
+          .where('userId', isEqualTo: userId)
+          .where('checklistId', isEqualTo: checklistId)
+          .where('status', isEqualTo: 'joined')
+          .limit(1)
+          .get();
+      
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      throw Exception('참여 여부 확인 실패: $e');
+    }
+  }
+
+  /// 사용자 참여 이력 저장
+  Future<void> saveUserJoinedList({
+    required String userId,
+    required String checklistId,
+    required String checklistTitle,
+  }) async {
+    try {
+      await userJoinedListsCollection.add({
+        'userId': userId,
+        'checklistId': checklistId,
+        'checklistTitle': checklistTitle,
+        'joinedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('참여 이력 저장 실패: $e');
+    }
+  }
+
+  /// 사용자가 참여한 체크리스트 목록 조회
+  Stream<QuerySnapshot> getUserJoinedLists(String userId) {
+    return userJoinedListsCollection
+        .where('userId', isEqualTo: userId)
+        .snapshots();
   }
 
   /// 특정 체크리스트의 참가자 목록 조회 (모든 상태)
@@ -231,6 +315,68 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('참가자 제거 실패: $e');
+    }
+  }
+
+  /// 체크리스트 항목 생성
+  /// 
+  /// [checklistId] 체크리스트 ID
+  /// [title] 항목 제목 (예: "출석", "식사", "기념품")
+  Future<DocumentReference> createChecklistItem({
+    required String checklistId,
+    required String title,
+  }) async {
+    try {
+      // 현재 체크리스트의 항목 개수를 확인하여 order 설정
+      final existingItems = await checklistItemsCollection
+          .where('checklistId', isEqualTo: checklistId)
+          .get();
+      
+      final order = existingItems.docs.length;
+
+      return await checklistItemsCollection.add({
+        'checklistId': checklistId,
+        'title': title,
+        'order': order,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('체크리스트 항목 생성 실패: $e');
+    }
+  }
+
+  /// 특정 체크리스트의 항목 목록 조회
+  Stream<QuerySnapshot> getChecklistItems(String checklistId) {
+    return checklistItemsCollection
+        .where('checklistId', isEqualTo: checklistId)
+        .snapshots();
+  }
+
+  /// 참가자의 체크 상태 토글
+  /// 
+  /// [participantId] 참가자 ID
+  /// [itemId] 체크리스트 항목 ID
+  /// [isChecked] 체크 상태
+  Future<void> toggleParticipantCheck({
+    required String participantId,
+    required String itemId,
+    required bool isChecked,
+  }) async {
+    try {
+      await participantsCollection.doc(participantId).update({
+        'checks.$itemId': isChecked,
+      });
+    } catch (e) {
+      throw Exception('체크 상태 업데이트 실패: $e');
+    }
+  }
+
+  /// 체크리스트 항목 삭제
+  Future<void> deleteChecklistItem(String itemId) async {
+    try {
+      await checklistItemsCollection.doc(itemId).delete();
+    } catch (e) {
+      throw Exception('체크리스트 항목 삭제 실패: $e');
     }
   }
 }

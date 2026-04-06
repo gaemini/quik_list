@@ -1,13 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_check_app/core/services/firestore_service.dart';
-import 'package:qr_check_app/features/participant/presentation/pages/confirmed_list_page.dart';
-import 'package:qr_check_app/features/participant/presentation/pages/pending_list_page.dart';
-import 'package:qr_check_app/features/qr/presentation/pages/qr_generate_page.dart';
+import 'package:qr_check_app/features/qr/presentation/pages/qr_host_page.dart';
+import 'package:qr_check_app/features/checklist/presentation/pages/final_list_page.dart';
 
 class ChecklistDetailPage extends StatelessWidget {
   final String checklistId;
   final String checklistTitle;
+
+  static const _primary = Color(0xFFFF7300);
+  static const _secondary = Color(0xFFFFE5D9);
+  static const _neutral = Color(0xFF2C3E50);
 
   const ChecklistDetailPage({
     super.key,
@@ -19,186 +22,188 @@ class ChecklistDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final firestoreService = FirestoreService();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(checklistTitle),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.blue[400]!,
-                      Colors.blue[600]!,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue[200]!,
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.checklist,
-                      size: 48,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      checklistTitle,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                '참가자 관리',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              StreamBuilder<QuerySnapshot>(
-                stream: firestoreService.getParticipantsByChecklist(checklistId),
-                builder: (context, snapshot) {
-                  final participants = snapshot.data?.docs ?? [];
-                  final pending = participants.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return data['status'] == 'pending';
-                  }).length;
-                  final confirmed = participants.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return data['status'] == 'confirmed';
-                  }).length;
+    return StreamBuilder<DocumentSnapshot>(
+      stream: firestoreService.checklistsCollection.doc(checklistId).snapshots(),
+      builder: (context, checklistSnapshot) {
+        if (checklistSnapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(title: Text(checklistTitle)),
+            body: const Center(child: CircularProgressIndicator(color: _primary)),
+          );
+        }
 
-                  return Column(
-                    children: [
-                      _buildActionButton(
-                        context,
-                        icon: Icons.hourglass_empty,
-                        title: '대기 중인 참가자',
-                        description: '확인이 필요한 참가자 목록',
-                        count: pending,
-                        color: Colors.orange,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => PendingListPage(
-                                checklistId: checklistId,
-                                checklistTitle: checklistTitle,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      _buildActionButton(
-                        context,
-                        icon: Icons.check_circle,
-                        title: '확인된 참가자',
-                        description: '확인 완료된 참가자 목록',
-                        count: confirmed,
-                        color: Colors.green,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ConfirmedListPage(
-                                checklistId: checklistId,
-                                checklistTitle: checklistTitle,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'QR 코드',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              _buildActionButton(
-                context,
-                icon: Icons.qr_code,
-                title: 'QR 코드 생성',
-                description: '참가자용 QR 코드를 생성합니다',
-                color: Colors.purple,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => QRGeneratePage(
-                        checklistId: checklistId,
-                      ),
-                    ),
-                  );
-                },
-              ),
+        if (!checklistSnapshot.hasData || !checklistSnapshot.data!.exists) {
+          return Scaffold(
+            appBar: AppBar(title: Text(checklistTitle)),
+            body: const Center(child: Text('체크리스트를 찾을 수 없습니다')),
+          );
+        }
+
+        final checklistData = checklistSnapshot.data!.data() as Map<String, dynamic>;
+        final status = checklistData['status'] ?? 'collecting';
+        final isClosed = status == 'closed';
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(checklistTitle),
+            actions: [
+              if (isClosed)
+                Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _neutral,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    '마감됨',
+                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ),
             ],
           ),
-        ),
-      ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Status header
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isClosed ? _neutral : _primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isClosed ? Icons.check_circle : Icons.checklist,
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                checklistTitle,
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isClosed ? '이벤트가 종료되었습니다' : '참가자 수집 중',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Text('참가자 현황', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 12),
+
+                  StreamBuilder<QuerySnapshot>(
+                    stream: firestoreService.getJoinedParticipants(checklistId),
+                    builder: (context, snapshot) {
+                      final participants = snapshot.data?.docs ?? [];
+                      return _buildActionCard(
+                        context,
+                        icon: Icons.people,
+                        title: '참가자 목록',
+                        description: '참여한 사람들을 확인하세요',
+                        count: participants.length,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => FinalListPage(
+                                checklistId: checklistId,
+                                checklistTitle: checklistTitle,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  Text(
+                    isClosed ? '최종 관리' : 'QR 코드 & 실시간 모니터링',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (isClosed)
+                    _buildActionCard(
+                      context,
+                      icon: Icons.assessment,
+                      title: '최종 명단 관리',
+                      description: '정렬 및 PDF 내보내기',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => FinalListPage(
+                              checklistId: checklistId,
+                              checklistTitle: checklistTitle,
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  else
+                    _buildActionCard(
+                      context,
+                      icon: Icons.qr_code_2,
+                      title: '실시간 참가자 모니터링',
+                      description: 'QR 코드 표시 및 참가자 실시간 확인',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => QRHostPage(
+                              checklistId: checklistId,
+                              checklistTitle: checklistTitle,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildActionButton(
+  Widget _buildActionCard(
     BuildContext context, {
     required IconData icon,
     required String title,
     required String description,
-    required Color color,
     int? count,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      elevation: 0,
+    return Card(
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(12),
-          ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: _secondary,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 28,
-                ),
+                child: Icon(icon, color: _primary, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -207,31 +212,18 @@ class ChecklistDetailPage extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _neutral)),
                         if (count != null) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: color,
+                              color: _primary,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               '$count',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                           ),
                         ],
@@ -240,18 +232,12 @@ class ChecklistDetailPage extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       description,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _neutral.withOpacity(0.5)),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: Colors.grey[400],
-              ),
+              Icon(Icons.chevron_right, color: _neutral.withOpacity(0.3)),
             ],
           ),
         ),
